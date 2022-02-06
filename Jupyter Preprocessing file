@@ -1,1 +1,1205 @@
 
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 176,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "\n",
+    "import pandas as pd\n",
+    "import nltk\n",
+    "import numpy as np\n",
+    "import string\n",
+    "import enchant\n",
+    "from nltk.tokenize import word_tokenize\n",
+    "from nltk.corpus import stopwords\n",
+    "from spellchecker import SpellChecker\n",
+    "from ftfy import fix_text\n",
+    "from textblob import TextBlob\n",
+    "from nltk.stem import WordNetLemmatizer\n",
+    "from googletrans.client import Translator\n",
+    "from nltk.corpus import wordnet as wordnet\n",
+    "import time\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 177,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dictionary = enchant.Dict(\"en_US\")\n",
+    "translator = Translator()\n",
+    "lemmatizer = WordNetLemmatizer()\n",
+    "spell = SpellChecker()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 178,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data = pd.read_csv(\"London_hotel_reviews.csv\", encoding='latin-1')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 179,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data_with_english = data.copy()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 180,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property Name</th>\n",
+       "      <th>Review Rating</th>\n",
+       "      <th>Review Title</th>\n",
+       "      <th>Review Text</th>\n",
+       "      <th>Location Of The Reviewer</th>\n",
+       "      <th>Date Of Review</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>Siamo stati a Londra per un week end ed abbiam...</td>\n",
+       "      <td>Casale Monferrato, Italy</td>\n",
+       "      <td>10/20/2012</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>I had a pleasure of staying in this hotel for ...</td>\n",
+       "      <td>Savannah, Georgia</td>\n",
+       "      <td>3/23/2016</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>First visit to the American Bar at the Savoy</td>\n",
+       "      <td>A very lovely first visit to this iconic hotel...</td>\n",
+       "      <td>London</td>\n",
+       "      <td>7/30/2013</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Rhodes Hotel</td>\n",
+       "      <td>4</td>\n",
+       "      <td>Nice stay</td>\n",
+       "      <td>3 of us stayed at the Rhodes Hotel for 4 night...</td>\n",
+       "      <td>Maui, Hawaii</td>\n",
+       "      <td>6/2/2012</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Perfection</td>\n",
+       "      <td>Form the moment we arrived until we left we ex...</td>\n",
+       "      <td>London, United Kingdom</td>\n",
+       "      <td>11/24/2017</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "            Property Name  Review Rating  \\\n",
+       "0  Apex London Wall Hotel              5   \n",
+       "1  Corinthia Hotel London              5   \n",
+       "2               The Savoy              5   \n",
+       "3            Rhodes Hotel              4   \n",
+       "4               The Savoy              5   \n",
+       "\n",
+       "                                   Review Title  \\\n",
+       "0                         Ottima qualità prezzo   \n",
+       "1            By far, my best hotel in the world   \n",
+       "2  First visit to the American Bar at the Savoy   \n",
+       "3                                     Nice stay   \n",
+       "4                                    Perfection   \n",
+       "\n",
+       "                                         Review Text  \\\n",
+       "0  Siamo stati a Londra per un week end ed abbiam...   \n",
+       "1  I had a pleasure of staying in this hotel for ...   \n",
+       "2  A very lovely first visit to this iconic hotel...   \n",
+       "3  3 of us stayed at the Rhodes Hotel for 4 night...   \n",
+       "4  Form the moment we arrived until we left we ex...   \n",
+       "\n",
+       "   Location Of The Reviewer Date Of Review  \n",
+       "0  Casale Monferrato, Italy     10/20/2012  \n",
+       "1         Savannah, Georgia      3/23/2016  \n",
+       "2                    London      7/30/2013  \n",
+       "3              Maui, Hawaii       6/2/2012  \n",
+       "4    London, United Kingdom     11/24/2017  "
+      ]
+     },
+     "execution_count": 180,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_with_english.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 181,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property Name</th>\n",
+       "      <th>Review Rating</th>\n",
+       "      <th>Review Title</th>\n",
+       "      <th>Review Text</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>Siamo stati a Londra per un week end ed abbiam...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>I had a pleasure of staying in this hotel for ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>First visit to the American Bar at the Savoy</td>\n",
+       "      <td>A very lovely first visit to this iconic hotel...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Rhodes Hotel</td>\n",
+       "      <td>4</td>\n",
+       "      <td>Nice stay</td>\n",
+       "      <td>3 of us stayed at the Rhodes Hotel for 4 night...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Perfection</td>\n",
+       "      <td>Form the moment we arrived until we left we ex...</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "            Property Name  Review Rating  \\\n",
+       "0  Apex London Wall Hotel              5   \n",
+       "1  Corinthia Hotel London              5   \n",
+       "2               The Savoy              5   \n",
+       "3            Rhodes Hotel              4   \n",
+       "4               The Savoy              5   \n",
+       "\n",
+       "                                   Review Title  \\\n",
+       "0                         Ottima qualità prezzo   \n",
+       "1            By far, my best hotel in the world   \n",
+       "2  First visit to the American Bar at the Savoy   \n",
+       "3                                     Nice stay   \n",
+       "4                                    Perfection   \n",
+       "\n",
+       "                                         Review Text  \n",
+       "0  Siamo stati a Londra per un week end ed abbiam...  \n",
+       "1  I had a pleasure of staying in this hotel for ...  \n",
+       "2  A very lovely first visit to this iconic hotel...  \n",
+       "3  3 of us stayed at the Rhodes Hotel for 4 night...  \n",
+       "4  Form the moment we arrived until we left we ex...  "
+      ]
+     },
+     "execution_count": 181,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_with_english = data_with_english[['Property Name','Review Rating','Review Title','Review Text']]\n",
+    "data_with_english.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 182,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "109320"
+      ]
+     },
+     "execution_count": 182,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_with_english.size"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "def removePunctuation(str):\n",
+    "    str=fix_text(str)\n",
+    "    str=str.translator(str.maketrans('','',string.punctuation))\n",
+    "    if not str:\n",
+    "        str = \" \"\n",
+    "    return str"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "def checkIfEnglish(str):\n",
+    "    newstr = removePunctuation(str)\n",
+    "    if newstr != \" \":\n",
+    "        if dictionary.check(newstr):\n",
+    "            return 1\n",
+    "    return 0"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "list_drop=[]\n",
+    "start_time= time.time()\n",
+    "for index, row in data_with_english.iterrows():\n",
+    "    eachRow = row['Review Text'].split()\n",
+    "    eachTopic = row['Review Title'].split()\n",
+    "    try:\n",
+    "        if not (checkIfEnglish(eachTopic[0]) + checkIfEnglish(eachRow[0]) + checkIfEnglish(eachRow[1]) + checkIfEnglish(eachRow[int(len(eachRow)/2)]) + checkIfEnglish(eachRow[-1])) >=4:\n",
+    "            eachList = [row['Property Name'], row['Review Rating'], row['Review Title'], row['Review Text'], row['Location Of The Reviewer'], row['Date Of Review']]\n",
+    "            list_drop.append(eachList)\n",
+    "            data_with_english.drop(index,inplace=True)\n",
+    "    except Exception:\n",
+    "        data_with_english.drop(index, inplace=True)\n",
+    "print(\"---%.2f seconds ---\"%(time.time() - start_time))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "print(list_drop)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 183,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property Name</th>\n",
+       "      <th>Review Rating</th>\n",
+       "      <th>Review Title</th>\n",
+       "      <th>Review Text</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "Empty DataFrame\n",
+       "Columns: [Property Name, Review Rating, Review Title, Review Text]\n",
+       "Index: []"
+      ]
+     },
+     "execution_count": 183,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "non_english_df = pd.DataFrame(list_drop, columns = data_with_english.columns)\n",
+    "non_english_df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 184,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "27330\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(len(data_with_english))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 185,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property Name</th>\n",
+       "      <th>Review Rating</th>\n",
+       "      <th>Review Title</th>\n",
+       "      <th>Review Text</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>Siamo stati a Londra per un week end ed abbiam...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>I had a pleasure of staying in this hotel for ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>First visit to the American Bar at the Savoy</td>\n",
+       "      <td>A very lovely first visit to this iconic hotel...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Rhodes Hotel</td>\n",
+       "      <td>4</td>\n",
+       "      <td>Nice stay</td>\n",
+       "      <td>3 of us stayed at the Rhodes Hotel for 4 night...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Perfection</td>\n",
+       "      <td>Form the moment we arrived until we left we ex...</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "            Property Name  Review Rating  \\\n",
+       "0  Apex London Wall Hotel              5   \n",
+       "1  Corinthia Hotel London              5   \n",
+       "2               The Savoy              5   \n",
+       "3            Rhodes Hotel              4   \n",
+       "4               The Savoy              5   \n",
+       "\n",
+       "                                   Review Title  \\\n",
+       "0                         Ottima qualità prezzo   \n",
+       "1            By far, my best hotel in the world   \n",
+       "2  First visit to the American Bar at the Savoy   \n",
+       "3                                     Nice stay   \n",
+       "4                                    Perfection   \n",
+       "\n",
+       "                                         Review Text  \n",
+       "0  Siamo stati a Londra per un week end ed abbiam...  \n",
+       "1  I had a pleasure of staying in this hotel for ...  \n",
+       "2  A very lovely first visit to this iconic hotel...  \n",
+       "3  3 of us stayed at the Rhodes Hotel for 4 night...  \n",
+       "4  Form the moment we arrived until we left we ex...  "
+      ]
+     },
+     "execution_count": 185,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_with_english.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 199,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data_with_english_sub = data_with_english"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 208,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property Name</th>\n",
+       "      <th>Review Rating</th>\n",
+       "      <th>Review Title</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>First visit to the American Bar at the Savoy</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Rhodes Hotel</td>\n",
+       "      <td>4</td>\n",
+       "      <td>Nice stay</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Perfection</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "            Property Name  Review Rating  \\\n",
+       "0  Apex London Wall Hotel              5   \n",
+       "1  Corinthia Hotel London              5   \n",
+       "2               The Savoy              5   \n",
+       "3            Rhodes Hotel              4   \n",
+       "4               The Savoy              5   \n",
+       "\n",
+       "                                   Review Title  \n",
+       "0                         Ottima qualità prezzo  \n",
+       "1            By far, my best hotel in the world  \n",
+       "2  First visit to the American Bar at the Savoy  \n",
+       "3                                     Nice stay  \n",
+       "4                                    Perfection  "
+      ]
+     },
+     "execution_count": 208,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_with_english.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 209,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "KeyError",
+     "evalue": "'Review Text'",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mKeyError\u001b[0m                                  Traceback (most recent call last)",
+      "\u001b[0;32m/usr/local/anaconda3/envs/mlib_demo/lib/python3.7/site-packages/pandas/core/indexes/base.py\u001b[0m in \u001b[0;36mget_loc\u001b[0;34m(self, key, method, tolerance)\u001b[0m\n\u001b[1;32m   3077\u001b[0m             \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 3078\u001b[0;31m                 \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_engine\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_loc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   3079\u001b[0m             \u001b[0;32mexcept\u001b[0m \u001b[0mKeyError\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/index.pyx\u001b[0m in \u001b[0;36mpandas._libs.index.IndexEngine.get_loc\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/index.pyx\u001b[0m in \u001b[0;36mpandas._libs.index.IndexEngine.get_loc\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/hashtable_class_helper.pxi\u001b[0m in \u001b[0;36mpandas._libs.hashtable.PyObjectHashTable.get_item\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/hashtable_class_helper.pxi\u001b[0m in \u001b[0;36mpandas._libs.hashtable.PyObjectHashTable.get_item\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;31mKeyError\u001b[0m: 'Review Text'",
+      "\nDuring handling of the above exception, another exception occurred:\n",
+      "\u001b[0;31mKeyError\u001b[0m                                  Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-209-2ed69b694651>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdata_with_english_sentence_reviews\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpd\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mDataFrame\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mdata_with_english\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m'Review Text'\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mstr\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0msplit\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'.'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mpd\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mSeries\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mstack\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m/usr/local/anaconda3/envs/mlib_demo/lib/python3.7/site-packages/pandas/core/frame.py\u001b[0m in \u001b[0;36m__getitem__\u001b[0;34m(self, key)\u001b[0m\n\u001b[1;32m   2686\u001b[0m             \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_getitem_multilevel\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2687\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2688\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_getitem_column\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2689\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2690\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m_getitem_column\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/usr/local/anaconda3/envs/mlib_demo/lib/python3.7/site-packages/pandas/core/frame.py\u001b[0m in \u001b[0;36m_getitem_column\u001b[0;34m(self, key)\u001b[0m\n\u001b[1;32m   2693\u001b[0m         \u001b[0;31m# get column\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2694\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcolumns\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mis_unique\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2695\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_get_item_cache\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2696\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2697\u001b[0m         \u001b[0;31m# duplicate columns & possible reduce dimensionality\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/usr/local/anaconda3/envs/mlib_demo/lib/python3.7/site-packages/pandas/core/generic.py\u001b[0m in \u001b[0;36m_get_item_cache\u001b[0;34m(self, item)\u001b[0m\n\u001b[1;32m   2487\u001b[0m         \u001b[0mres\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mcache\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mitem\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2488\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mres\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2489\u001b[0;31m             \u001b[0mvalues\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_data\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mitem\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2490\u001b[0m             \u001b[0mres\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_box_item_values\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mitem\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mvalues\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2491\u001b[0m             \u001b[0mcache\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mitem\u001b[0m\u001b[0;34m]\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mres\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/usr/local/anaconda3/envs/mlib_demo/lib/python3.7/site-packages/pandas/core/internals.py\u001b[0m in \u001b[0;36mget\u001b[0;34m(self, item, fastpath)\u001b[0m\n\u001b[1;32m   4113\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   4114\u001b[0m             \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0misna\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mitem\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 4115\u001b[0;31m                 \u001b[0mloc\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mitems\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_loc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mitem\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   4116\u001b[0m             \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   4117\u001b[0m                 \u001b[0mindexer\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0marange\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mitems\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0misna\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mitems\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/usr/local/anaconda3/envs/mlib_demo/lib/python3.7/site-packages/pandas/core/indexes/base.py\u001b[0m in \u001b[0;36mget_loc\u001b[0;34m(self, key, method, tolerance)\u001b[0m\n\u001b[1;32m   3078\u001b[0m                 \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_engine\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_loc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   3079\u001b[0m             \u001b[0;32mexcept\u001b[0m \u001b[0mKeyError\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 3080\u001b[0;31m                 \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_engine\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_loc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_maybe_cast_indexer\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   3081\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   3082\u001b[0m         \u001b[0mindexer\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_indexer\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mkey\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmethod\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mmethod\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtolerance\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtolerance\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/index.pyx\u001b[0m in \u001b[0;36mpandas._libs.index.IndexEngine.get_loc\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/index.pyx\u001b[0m in \u001b[0;36mpandas._libs.index.IndexEngine.get_loc\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/hashtable_class_helper.pxi\u001b[0m in \u001b[0;36mpandas._libs.hashtable.PyObjectHashTable.get_item\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;32mpandas/_libs/hashtable_class_helper.pxi\u001b[0m in \u001b[0;36mpandas._libs.hashtable.PyObjectHashTable.get_item\u001b[0;34m()\u001b[0m\n",
+      "\u001b[0;31mKeyError\u001b[0m: 'Review Text'"
+     ]
+    }
+   ],
+   "source": [
+    "data_with_english_sentence_reviews = pd.DataFrame(data_with_english['Review Text'].str.split('.').apply(pd.Series, 1).stack())\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 210,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property Name</th>\n",
+       "      <th>Review Rating</th>\n",
+       "      <th>Review Title</th>\n",
+       "      <th>0</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>Siamo stati a Londra per un week end ed abbiam...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>| Personale molto gentile e disponibile, came...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>| Bagno grande con asciugacapelli, vasca da b...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>ma soprattutto pulito! | Ottima posizione seb...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>| In ogni caso muoversi non è un problema: la...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td>| Nel periodo in cui siamo stati noi stavano ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "      <td></td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>I had a pleasure of staying in this hotel for ...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>This hotel was perfect in every way</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>Communication with the hotel before staying w...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>Checking in was a breeze</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>You go through the spectacular lobby with mod...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>My room, they gave me an upgrade to junior su...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>We had a walk-in closet of the size where you...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>The decor was very refined, and oh the bathro...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>We were 5 minutes walk to Trafalgar Square, b...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>Right outside was Embankment tube stop</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>We would walk to theater area and to numerous...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>| We had buffet breakfast or room service eve...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "      <td>It was pricy, but my rate included it</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "            Property Name  Review Rating                        Review Title  \\\n",
+       "0  Apex London Wall Hotel              5               Ottima qualità prezzo   \n",
+       "0  Apex London Wall Hotel              5               Ottima qualità prezzo   \n",
+       "0  Apex London Wall Hotel              5               Ottima qualità prezzo   \n",
+       "0  Apex London Wall Hotel              5               Ottima qualità prezzo   \n",
+       "0  Apex London Wall Hotel              5               Ottima qualità prezzo   \n",
+       "0  Apex London Wall Hotel              5               Ottima qualità prezzo   \n",
+       "0  Apex London Wall Hotel              5               Ottima qualità prezzo   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "1  Corinthia Hotel London              5  By far, my best hotel in the world   \n",
+       "\n",
+       "                                                   0  \n",
+       "0  Siamo stati a Londra per un week end ed abbiam...  \n",
+       "0   | Personale molto gentile e disponibile, came...  \n",
+       "0   | Bagno grande con asciugacapelli, vasca da b...  \n",
+       "0   ma soprattutto pulito! | Ottima posizione seb...  \n",
+       "0   | In ogni caso muoversi non è un problema: la...  \n",
+       "0   | Nel periodo in cui siamo stati noi stavano ...  \n",
+       "0                                                     \n",
+       "1  I had a pleasure of staying in this hotel for ...  \n",
+       "1                This hotel was perfect in every way  \n",
+       "1   Communication with the hotel before staying w...  \n",
+       "1                           Checking in was a breeze  \n",
+       "1   You go through the spectacular lobby with mod...  \n",
+       "1   My room, they gave me an upgrade to junior su...  \n",
+       "1   We had a walk-in closet of the size where you...  \n",
+       "1   The decor was very refined, and oh the bathro...  \n",
+       "1   We were 5 minutes walk to Trafalgar Square, b...  \n",
+       "1             Right outside was Embankment tube stop  \n",
+       "1   We would walk to theater area and to numerous...  \n",
+       "1   | We had buffet breakfast or room service eve...  \n",
+       "1              It was pricy, but my rate included it  "
+      ]
+     },
+     "execution_count": 210,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_with_english_sentence_reviews.head(20)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 211,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "AttributeError",
+     "evalue": "'Int64Index' object has no attribute 'droplevel'",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mAttributeError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-211-01476bea32eb>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdata_with_english_sentence_reviews\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mindex\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mdata_with_english_sentence_reviews\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mindex\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdroplevel\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m-\u001b[0m\u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;31mAttributeError\u001b[0m: 'Int64Index' object has no attribute 'droplevel'"
+     ]
+    }
+   ],
+   "source": [
+    "data_with_english_sentence_reviews.index = data_with_english_sentence_reviews.index.droplevel(-1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 203,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data_with_english_sentence_reviews.name = 'Review Text'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 190,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "del data_with_english['Review Text']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 191,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data_with_english_split_sentence_reviews = data_with_english.join(data_with_english_sentence_reviews)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 212,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "983188"
+      ]
+     },
+     "execution_count": 212,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_with_english_split_sentence_reviews.size"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 213,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data_with_english_sentence_reviews = data_with_english_split_sentence_reviews"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "data_with_english_sentence_reviews.columns = ['Review Rating' , 'Review Title', 'Review Text', 'Property Name']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 214,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def bdp(text):\n",
+    "    tokens = word_tokenize(text)\n",
+    "    tokens=[w.lower() for w in tokens]\n",
+    "    tokens_clean = str.maketrans('','',string.punction)\n",
+    "    tokens_cleaned = [w.translate(tokens_clean) for w in tokens]\n",
+    "    clean_words = [word for word in tokens_cleaned if word.isalpha()]\n",
+    "    final_review = \" \".join(clean_words)\n",
+    "    return final_review"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 215,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def adp(text):\n",
+    "    tokens =word_tokenize(text)\n",
+    "    stop_words = set(stopwords.words('english'))\n",
+    "    words = [spell.correction(word) for word in words]\n",
+    "    words = [lemmatizer.lemmatize(word) for word in words]\n",
+    "    return \" \".join(words)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 216,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import multiprocessing as mp"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 217,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "review_text = []\n",
+    "review_text_sentence = []\n",
+    "review_title = []\n",
+    "review_title_sentence = []"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 218,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Property Name</th>\n",
+       "      <th>Review Rating</th>\n",
+       "      <th>Review Title</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Apex London Wall Hotel</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Ottima qualità prezzo</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Corinthia Hotel London</td>\n",
+       "      <td>5</td>\n",
+       "      <td>By far, my best hotel in the world</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>First visit to the American Bar at the Savoy</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Rhodes Hotel</td>\n",
+       "      <td>4</td>\n",
+       "      <td>Nice stay</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>The Savoy</td>\n",
+       "      <td>5</td>\n",
+       "      <td>Perfection</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "            Property Name  Review Rating  \\\n",
+       "0  Apex London Wall Hotel              5   \n",
+       "1  Corinthia Hotel London              5   \n",
+       "2               The Savoy              5   \n",
+       "3            Rhodes Hotel              4   \n",
+       "4               The Savoy              5   \n",
+       "\n",
+       "                                   Review Title  \n",
+       "0                         Ottima qualità prezzo  \n",
+       "1            By far, my best hotel in the world  \n",
+       "2  First visit to the American Bar at the Savoy  \n",
+       "3                                     Nice stay  \n",
+       "4                                    Perfection  "
+      ]
+     },
+     "execution_count": 218,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data_with_english.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 220,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "SyntaxError",
+     "evalue": "invalid syntax (<ipython-input-220-316e9e6057bc>, line 4)",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;36m  File \u001b[0;32m\"<ipython-input-220-316e9e6057bc>\"\u001b[0;36m, line \u001b[0;32m4\u001b[0m\n\u001b[0;31m    review_text = pool.map(adp, review Text)\u001b[0m\n\u001b[0m                                          ^\u001b[0m\n\u001b[0;31mSyntaxError\u001b[0m\u001b[0;31m:\u001b[0m invalid syntax\n"
+     ]
+    }
+   ],
+   "source": [
+    "start_time = time.time()\n",
+    "with mp.Pool() as pool:\n",
+    "    review_text = pool.map(bdp, data_with_english[\"0\"])\n",
+    "    review_text = pool.map(adp, review Text)\n",
+    "    review_title = pool.map(bdp, data_with_english[\"Review Title\"])\n",
+    "    review_title = pool.map(adp, review_title)\n",
+    "    review_text_sentence = pool.map(bdp, data_with_english_sentence_reviewed['Review Text'])\n",
+    "    review_text_sentence = pool.map(adp, review_text_sentence)\n",
+    "    review_title_sentence = pool.map(bdp, data_with_english_sentence_reviewed['Review Title'])\n",
+    "    review_title_sentence = pool.map(adp, review_title_sentence)\n",
+    "print(\"---.2f---\" %(time.time() - start_time))\n",
+    "    \n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python mlib_demo",
+   "language": "python",
+   "name": "mlib_demo"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
